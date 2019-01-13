@@ -22,70 +22,82 @@ SOFTWARE.
 ============================================================================*/
 
 #include <iostream>
-#include <map>
 #include <time.h>
 #include <sys/time.h>
 #include <pthread.h>
+#include <map>
+
+#ifndef __TIMER_H__
+#define __TIMER_H__
+
+#define TIMECOST_START(n) TimeCost::Summary::getInstance()->start(n)
+#define TIMECOST_END(n) TimeCost::Summary::getInstance()->end(n)
+#define TIMECOST_VERBOSE_END(n) TimeCost::Summary::getInstance()->end(n, true)
+
+#define TIMECOST_RAII(n) TimeCost::SummaryRAII(n)
+#define TIMECOST_VERBOSE_RAII(n) TimeCost::SummaryRAII(n, true)
 
 namespace TimeCost
 {
-class Timer
-{
+    class Timer
+    {
     public:
         Timer(){ resetStart(); }
         void resetStart() { m_start = wallClock(); }
         double durationFromStart() { return wallClock() - m_start; }
 
-    private:
+     private:
         double wallClock()
         {
             struct timeval time;
             if (gettimeofday(&time, NULL))
             {
-                std::cout << " failed to get wall clock" << std::endl;
-                return 0;
+                throw "Failed to get wall clock!!!";
             }
             return (double)time.tv_sec + (double)time.tv_usec * .000001;
         }
 
         double m_start;
-};
+    };
 
-struct Data
-{
-    uint32_t count;
-    Timer timer;
-    double timecost;
-
-    Data() : count(0), timer(Timer()), timecost(0) {}
-};
-
-class Summary
-{
+    struct Data
+    {
+        uint32_t count;
+        Timer timer;
+        double timecost;
+    
+        Data() : count(0), timer(Timer()), timecost(0) {}
+    };
+    
+    class Summary
+    {
     public:
-        static Summary * getInstance()
-        {
-            if(!m_instance)
-                m_instance = new Summary();
-            return m_instance;
-        }
-
+        static Summary * getInstance();
         void start(std::string name);
-
         void end(std::string name, bool verbose=false);
-
         void report();
-
         ~Summary() { report(); delete m_instance; m_instance = nullptr; }
-
+    
     private:
-        Summary() : m_threadId(pthread_self()){}; 
+        Summary() : m_threadId(pthread_self()) {}
+        Summary(const Summary& another) {}
         
         bool started();
-
         pthread_t m_threadId;
         std::map<std::string, Data> m_data;
         static Summary* m_instance;
-}; // end of Summary
+    }; // end of Summary
+    
+    class SummaryRAII
+    {
+    public:
+        SummaryRAII(std::string name, bool verbose = false) : m_verbose(verbose) { Summary::getInstance()->start(name); }
+        ~SummaryRAII() { Summary::getInstance()->end(name, m_verbose); }
+    
+    private:
+        bool m_verbose;
+    }; // end of SummaryRAII
 
 } // end of TimeCost
+
+#endif // __TIMER_H__
