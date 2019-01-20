@@ -21,11 +21,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ============================================================================*/
 #include <mutex>
-#include "timer.hpp"
+#include <string>
+
+#include "timecost.hpp"
 
 namespace TimeCost
 {
-    TimeCostSummary* TimeCostSummary::m_instance = nullptr;
+    Summary* Summary::m_instance = nullptr;
 
     static std::mutex g_instanceMutex;
 
@@ -41,10 +43,10 @@ namespace TimeCost
 
     void Summary::report()
     {
-        static const std::string header = "(" + m_threadId + ") Time cost summary:\n";
-        static const std::string footer = "(" + m_threadId + ") -----------------\n";
+        //static const std::string header = "(" + std::to_string(m_threadId) + ") Time cost summary:\n";
+        //static const std::string footer = "(" + std::to_string(m_threadId) + ") -----------------\n";
 
-        std::cout << std::hex << header;
+        //std::cout << header;
         for(std::map<std::string, Data>::iterator iter = m_data.begin();
                     iter != m_data.end(); ++iter)
         {
@@ -56,7 +58,7 @@ namespace TimeCost
                     << data.count << " called." << std::endl;
             }
         }
-        std::cout << std::hex << footer;
+        //std::cout << footer;
     }
 
     void Summary::start(std::string name)
@@ -70,7 +72,7 @@ namespace TimeCost
 
     void Summary::end(std::string name, bool verbose)
     {
-        if(started())
+        if(started(name))
         {
             double duration = m_data[name].timer.durationFromStart();
             if(verbose)

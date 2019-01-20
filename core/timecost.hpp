@@ -26,16 +26,19 @@ SOFTWARE.
 #include <sys/time.h>
 #include <pthread.h>
 #include <map>
+#include <cstdint>
 
-#ifndef __TIMER_H__
-#define __TIMER_H__
+#ifndef __TIMECOST_H__
+#define __TIMECOST_H__
 
 #define TIMECOST_START(n) TimeCost::Summary::getInstance()->start(n)
 #define TIMECOST_END(n) TimeCost::Summary::getInstance()->end(n)
 #define TIMECOST_VERBOSE_END(n) TimeCost::Summary::getInstance()->end(n, true)
 
-#define TIMECOST_RAII(n) TimeCost::SummaryRAII(n)
-#define TIMECOST_VERBOSE_RAII(n) TimeCost::SummaryRAII(n, true)
+#define TIMECOST_RAII(n) TimeCost::SummaryRAII temp(n)
+#define TIMECOST_VERBOSE_RAII(n) TimeCost::SummaryRAII temp(n, true)
+
+#define TIMECOST_REPORT() TimeCost::Summary::getInstance()->report()
 
 namespace TimeCost
 {
@@ -62,7 +65,7 @@ namespace TimeCost
 
     struct Data
     {
-        uint32_t count;
+        std::uint32_t count;
         Timer timer;
         double timecost;
     
@@ -82,7 +85,7 @@ namespace TimeCost
         Summary() : m_threadId(pthread_self()) {}
         Summary(const Summary& another) {}
         
-        bool started();
+        bool started(std::string name);
         pthread_t m_threadId;
         std::map<std::string, Data> m_data;
         static Summary* m_instance;
@@ -91,13 +94,18 @@ namespace TimeCost
     class SummaryRAII
     {
     public:
-        SummaryRAII(std::string name, bool verbose = false) : m_verbose(verbose) { Summary::getInstance()->start(name); }
-        ~SummaryRAII() { Summary::getInstance()->end(name, m_verbose); }
+        SummaryRAII(std::string name, bool verbose = false) :
+        m_name(name), m_verbose(verbose)
+ 	    {
+ 	        Summary::getInstance()->start(m_name); 
+	    }
+        ~SummaryRAII() { Summary::getInstance()->end(m_name, m_verbose); }
     
     private:
         bool m_verbose;
+	    std::string m_name;
     }; // end of SummaryRAII
 
 } // end of TimeCost
 
-#endif // __TIMER_H__
+#endif // __TIMECOST_H__
